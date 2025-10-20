@@ -28,3 +28,31 @@ infra/terraform/.generated/
 # IDE
 .vscode/
 .DS_Store
+
+# Sensitive files: keys, certs, env, kubeconfig
+*.key
+*.crt
+*.pem
+*.pfx
+*.p12
+*.cer
+*.der
+*.csr
+*.jks
+*.keystore
+*.ppk
+
+# TLS directories
+infra/tls/dev/
+infra/tls/prod/
+
+# Env files
+.env.*
+!.env.example
+
+# Kubeconfig
+kubeconfig
+*.kubeconfig
+
+# Terraform variables (local-only)
+*.auto.tfvars
