@@ -121,6 +121,10 @@ This repo assumes an existing EKS cluster. The CI deploy job installs Nginx Ingr
 - `EKS_CLUSTER_NAME`
 - `ROLE_TO_ASSUME` (ARN from Terraform output `gha_role_arn`)
 - `S3_BUCKET_NAME`
+- Optional TLS per environment (to avoid committing certs/keys):
+  - `TLS_CERT_DEV`, `TLS_KEY_DEV`
+  - `TLS_CERT_STAGING`, `TLS_KEY_STAGING`
+  - `TLS_CERT_PROD`, `TLS_KEY_PROD`
 
 ## Security
 - No credentials hardcoded; use GitHub OIDC to assume role

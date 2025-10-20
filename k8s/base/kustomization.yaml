@@ -8,6 +8,5 @@ resources:
   - ingress.yaml
   - configmap.yaml
   - secret.yaml
-  - tls-secret.yaml
   - hpa-backend.yaml
   - hpa-frontend.yaml

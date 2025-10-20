@@ -56,3 +56,6 @@ kubeconfig
 
 # Terraform variables (local-only)
 *.auto.tfvars
+
+# Ignore committed TLS secret manifest in base
+k8s/base/tls-secret.yaml

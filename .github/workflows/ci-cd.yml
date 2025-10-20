@@ -114,6 +114,34 @@ jobs:
           kustomize edit set image REPLACE_BACKEND_IMAGE=${{ env.ECR_REGISTRY }}/backend:${{ github.sha }}
           kustomize edit set image REPLACE_FRONTEND_IMAGE=${{ env.ECR_REGISTRY }}/frontend:${{ github.sha }}
 
+      - name: Create TLS secret for environment
+        run: |
+          set -e
+          NAMESPACE=${{ env.NAMESPACE }}
+          ENV=${{ env.ENVIRONMENT }}
+          if [ "$ENV" = "dev" ]; then
+            CERT="${{ secrets.TLS_CERT_DEV }}"
+            KEY="${{ secrets.TLS_KEY_DEV }}"
+            SECRET_NAME="tls-dev"
+          elif [ "$ENV" = "prod" ]; then
+            CERT="${{ secrets.TLS_CERT_PROD }}"
+            KEY="${{ secrets.TLS_KEY_PROD }}"
+            SECRET_NAME="tls-prod"
+          else
+            CERT="${{ secrets.TLS_CERT_STAGING }}"
+            KEY="${{ secrets.TLS_KEY_STAGING }}"
+            SECRET_NAME="tls-placeholder"
+          fi
+          mkdir -p /tmp/tls
+          if [ -n "$CERT" ] && [ -n "$KEY" ]; then
+            printf "%s" "$CERT" > /tmp/tls/tls.crt
+            printf "%s" "$KEY" > /tmp/tls/tls.key
+          else
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/tls/tls.key -out /tmp/tls/tls.crt -subj "/CN=staging.local"
+          fi
+          kubectl -n "$NAMESPACE" create secret tls "$SECRET_NAME" --cert=/tmp/tls/tls.crt --key=/tmp/tls/tls.key --dry-run=client -o yaml | kubectl apply -f -
+          rm -rf /tmp/tls
+
       - name: Apply manifests
         working-directory: k8s/overlays/${{ env.ENVIRONMENT }}
         run: |
