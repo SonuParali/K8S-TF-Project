@@ -1,13 +1,13 @@
 # DevOps Task: Scalable, Secure, Automated Deployment Pipeline
 
-This repo demonstrates a full-stack microservices application deployed to AWS using containerization and Kubernetes orchestration, with CI/CD via GitHub Actions and domain + SSL configured on AWS.
+This repo demonstrates a full-stack microservices application deployed to AWS using containerization and Kubernetes orchestration configured on AWS, with CI/CD via GitHub Actions.
 
 ## Architecture Overview
 - Frontend: React (Vite) served via NGINX container
 - Backend: Express.js API
 - Containerization: Docker with multi-stage builds
 - Orchestration: Kubernetes manifests managed via Kustomize with dev/staging/prod overlays
-- AWS: EKS for Kubernetes, ECR for container registry, S3 for static asset hosting, ALB Ingress via AWS Load Balancer Controller, CloudWatch for logs
+- AWS: EKS for Kubernetes, ECR for container registry, S3 for static asset hosting, NGINX Ingress exposed via AWS LoadBalancer (ELB), CloudWatch for logs
 - CI/CD: GitHub Actions builds, tests, pushes images to ECR, and deploys to EKS
 - Domain & SSL: Route 53 + ACM certificate for HTTPS
 
@@ -62,8 +62,8 @@ Apply locally (assuming a kubeconfig):
 kubectl apply -k k8s/overlays/dev
 ```
 
-Ingress uses Nginx Ingress Controller without a domain. TLS is terminated by a Kubernetes secret `tls-placeholder`. Replace:
-- `REPLACE_ECR_URI` with your ECR registry URI
+Ingress defaults to catch-all (no `host`) in base/dev/prod. Staging adds `host: staging.local`. TLS uses a placeholder secret. When you do not have a domain, see "Access Without a Domain" below.
+
 
 ## AWS Infrastructure (Terraform Skeleton)
 - `infra/terraform` provides resources for:
@@ -81,14 +81,28 @@ terraform apply -var="aws_region=<region>" -var="project_name=<name>" -var="gith
 ### EKS Cluster
 This repo assumes an existing EKS cluster. The CI deploy job installs Nginx Ingress Controller via Helm (`ingress-nginx`) and exposes it as a `LoadBalancer` Service on AWS.
 
-### TLS Without a Domain
-- A Kubernetes TLS secret (`tls-placeholder`) terminates HTTPS at the Nginx Ingress.
-- Replace the placeholder cert/key with a self-signed certificate or a real one if available.
-- Fetch the public endpoint:
+### Access Without a Domain
+- Get the ingress address (AWS ELB hostname):
   ```bash
   kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
   ```
-- Access the app at `https://<load-balancer-hostname>`.
+- Dev and Prod (hostless rules):
+  - Routes match any `Host` header.
+  - Access frontend: `https://<load-balancer-hostname>/`
+  - Access backend: `https://<load-balancer-hostname>/api/hello`
+  - If using placeholder certs, use `curl -k` or replace `tls-dev`/`tls-prod` with valid certs.
+- Staging (host-based rule `staging.local`):
+  - Option A (quick test): `curl -H "Host: staging.local" https://<load-balancer-hostname>/ -k`
+  - Option B (hosts file): On Windows, edit `C:\Windows\System32\drivers\etc\hosts` and add `<ELB-IP> staging.local` (note: ELB IP can change).
+  - Option C (catch-all): Edit `k8s/overlays/staging/patch-ingress.yaml` to remove `host: staging.local` and `tls.hosts`, keeping only `secretName`.
+- TLS:
+  - Secrets `tls-dev`, `tls-prod`, and `tls-placeholder` are placeholders. Replace with valid or self-signed certs for non-production.
+  - Example (self-signed for staging):
+    ```bash
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout tls.key -out tls.crt -subj "/CN=staging.local"
+    kubectl -n staging create secret tls tls-placeholder --key tls.key --cert tls.crt --dry-run=client -o yaml | kubectl apply -f -
+    ```
+
 
 ## CI/CD Pipeline (GitHub Actions)
 - Triggers on `main` and manual dispatch with `environment` input (`dev|staging|prod`)
