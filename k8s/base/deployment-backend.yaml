@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: REPLACE_BACKEND_IMAGE
+          image: 390259467242.dkr.ecr.ap-south-1.amazonaws.com/k8s-tf-project-backend
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4000

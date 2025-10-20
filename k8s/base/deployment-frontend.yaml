@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: REPLACE_FRONTEND_IMAGE
+          image: 390259467242.dkr.ecr.ap-south-1.amazonaws.com/k8s-tf-project-frontend
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
