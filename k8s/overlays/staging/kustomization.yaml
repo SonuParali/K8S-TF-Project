@@ -1,0 +1,13 @@
+resources:
+  - ../../base
+  - namespace.yaml
+namespace: staging
+patchesStrategicMerge:
+  - ingress-patch.yaml
+images:
+  - name: REPLACE_BACKEND_IMAGE
+    newName: REPLACE_ECR_URI/backend
+    newTag: staging
+  - name: REPLACE_FRONTEND_IMAGE
+    newName: REPLACE_ECR_URI/frontend
+    newTag: staging

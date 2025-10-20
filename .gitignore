@@ -1,0 +1,27 @@
+# Node
+node_modules/
+dist/
+build/
+.env
+*.log
+
+# Service folders
+frontend/node_modules/
+frontend/dist/
+backend/node_modules/
+backend/dist/
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Docker
+*.tar
+
+# K8s
+.kube/
+
+# IDE
+.vscode/
+.DS_Store

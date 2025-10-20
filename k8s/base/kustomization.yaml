@@ -1,0 +1,10 @@
+resources:
+  - deployment-backend.yaml
+  - service-backend.yaml
+  - deployment-frontend.yaml
+  - service-frontend.yaml
+  - ingress.yaml
+  - configmap.yaml
+  - secret.yaml
+  - hpa-backend.yaml
+  - hpa-frontend.yaml

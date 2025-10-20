@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  annotations:
+    alb.ingress.kubernetes.io/certificate-arn: REPLACE_ACM_CERT_ARN_PROD
+spec:
+  rules:
+    - host: REPLACE_DOMAIN
+  tls:
+    - hosts:
+        - REPLACE_DOMAIN
+      secretName: tls-placeholder
