@@ -7,12 +7,17 @@ on:
     inputs:
       environment:
         description: "Deployment environment (dev|staging|prod)"
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
         default: "dev"
         required: true
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }} # e.g., <aws_account_id>.dkr.ecr.<region>.amazonaws.com
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
   ROLE_TO_ASSUME: ${{ secrets.ROLE_TO_ASSUME }}
   S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
@@ -83,17 +88,25 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
 
-      - name: Install kubectl and kustomize
+      - name: Install kubectl, kustomize, and helm
         run: |
           curl -L -o kubectl https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Install/Upgrade Nginx Ingress Controller
+        run: |
+          helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+          helm repo update
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --set controller.service.type=LoadBalancer
+          kubectl wait --namespace ingress-nginx --for=condition=ready pod -l app.kubernetes.io/name=ingress-nginx --timeout=180s
 
       - name: Set images for overlay
         working-directory: k8s/overlays/${{ env.ENVIRONMENT }}

@@ -1,5 +1,3 @@
-data "aws_caller_identity" "current" {}
-
 data "tls_certificate" "github" {
   url = "https://token.actions.githubusercontent.com"
 }
@@ -28,6 +26,9 @@ resource "aws_iam_role" "gha_deploy" {
               "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/main",
               "repo:${var.github_org}/${var.github_repo}:pull_request"
             ]
+          },
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
         }
       }

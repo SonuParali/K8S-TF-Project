@@ -1,12 +1,3 @@
-terraform {
-  required_providers {
-    kubectl = {
-      source  = "gavinbunney/kubectl"
-      version = "~> 1.14"
-    }
-  }
-}
-
 variable "kubeconfig_path" {
   description = "Path to kubeconfig file"
   type        = string

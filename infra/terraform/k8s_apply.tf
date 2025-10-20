@@ -26,17 +26,12 @@ resource "null_resource" "kustomize_build" {
 }
 
 # Read multi-document YAML into individual documents
-data "kubectl_file_documents" "rendered" {
-  filename   = local.rendered_yaml
+# Apply rendered YAML with kubectl (apply at terraform apply time)
+resource "null_resource" "kubectl_apply" {
   depends_on = [null_resource.kustomize_build]
-}
 
-# Apply each document as a manifest
-resource "kubectl_manifest" "apply" {
-  for_each            = toset(data.kubectl_file_documents.rendered.documents)
-  yaml_body           = each.value
-  server_side_apply   = true
-  force_conflicts     = true
-  wait                = true
-  wait_for_rollout    = true
+  provisioner "local-exec" {
+    interpreter = ["PowerShell", "-Command"]
+    command     = "kubectl apply -f \"${local.rendered_yaml}\""
+  }
 }

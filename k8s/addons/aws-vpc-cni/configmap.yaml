@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: amazon-vpc-cni
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: aws-node
+    k8s-app: aws-node
+    app.kubernetes.io/managed-by: kustomize
+data:
+  # Preserve existing keys and set desired ones
+  branch-eni-cooldown: "60"
+  enable-network-policy-controller: "false"
+  enable-windows-ipam: "false"
+  enable-windows-prefix-delegation: "false"
+  minimum-ip-target: "3"
+  warm-ip-target: "0"
+  warm-prefix-target: "1"
+  enable-prefix-delegation: "true"

@@ -22,6 +22,9 @@ backend/dist/
 # K8s
 .kube/
 
+# Terraform generated artifacts
+infra/terraform/.generated/
+
 # IDE
 .vscode/
 .DS_Store

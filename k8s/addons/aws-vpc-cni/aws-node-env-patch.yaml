@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aws-node
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: aws-node
+          env:
+            - name: ENABLE_PREFIX_DELEGATION
+              value: "true"
+            - name: WARM_PREFIX_TARGET
+              value: "1"
+            - name: WARM_ENI_TARGET
+              value: "0"

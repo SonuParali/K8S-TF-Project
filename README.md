@@ -62,10 +62,8 @@ Apply locally (assuming a kubeconfig):
 kubectl apply -k k8s/overlays/dev
 ```
 
-Ingress is configured for AWS ALB with annotations. Replace placeholders:
+Ingress uses Nginx Ingress Controller without a domain. TLS is terminated by a Kubernetes secret `tls-placeholder`. Replace:
 - `REPLACE_ECR_URI` with your ECR registry URI
-- `REPLACE_DOMAIN`, `REPLACE_DOMAIN_HOST` with your domain
-- `REPLACE_ACM_CERT_ARN_*` with ACM certificate ARNs per environment
 
 ## AWS Infrastructure (Terraform Skeleton)
 - `infra/terraform` provides resources for:
@@ -77,18 +75,20 @@ Initialize & apply:
 ```bash
 cd infra/terraform
 terraform init
-terraform apply -var="aws_region=<region>" -var="project_name=<name>" -var="github_org=<org>" -var="github_repo=<repo>" -var="domain_name=<domain>"
+terraform apply -var="aws_region=<region>" -var="project_name=<name>" -var="github_org=<org>" -var="github_repo=<repo>"
 ```
 
 ### EKS Cluster
-This repo assumes an existing EKS cluster and AWS Load Balancer Controller installed. You can provision EKS via Terraform (e.g., terraform-aws-modules/eks) or `eksctl`.
+This repo assumes an existing EKS cluster. The CI deploy job installs Nginx Ingress Controller via Helm (`ingress-nginx`) and exposes it as a `LoadBalancer` Service on AWS.
 
-### Domain & SSL
-- Register domain (Route 53 or external registrar)
-- Request an ACM certificate in the same region as the ALB
-- Update k8s ingress overlays with `alb.ingress.kubernetes.io/certificate-arn`
-- Create Route 53 records pointing to the ALB
-- HTTPS is enforced via ALB annotations (redirect HTTP → HTTPS)
+### TLS Without a Domain
+- A Kubernetes TLS secret (`tls-placeholder`) terminates HTTPS at the Nginx Ingress.
+- Replace the placeholder cert/key with a self-signed certificate or a real one if available.
+- Fetch the public endpoint:
+  ```bash
+  kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+  ```
+- Access the app at `https://<load-balancer-hostname>`.
 
 ## CI/CD Pipeline (GitHub Actions)
 - Triggers on `main` and manual dispatch with `environment` input (`dev|staging|prod`)
@@ -133,14 +133,14 @@ This repo assumes an existing EKS cluster and AWS Load Balancer Controller insta
 2. CI runs tests and builds images
 3. CI pushes images to ECR and updates kustomize overlay images
 4. `kubectl apply -k` deploys to EKS namespace per environment
-5. ALB+Ingress routes traffic; TLS via ACM
+5. Nginx Ingress routes traffic; TLS via Kubernetes secret
 
 ## Notes
 - Replace placeholders in k8s manifests and Terraform variables
-- Ensure AWS Load Balancer Controller is installed in EKS
-- For S3 website hosting with full HTTPS, consider CloudFront + ACM (not included here)
+- Ensure Nginx Ingress Controller is installed (CI deploy job installs it via Helm)
+- For S3 website hosting with full HTTPS, consider CloudFront; ACM is not required without a domain
 
 ## Troubleshooting
 - Image pull errors: confirm ECR repo exists and role has permissions
-- Ingress not ready: verify ALB controller, certificate ARN, and target group health
+- Ingress not ready: verify Nginx Ingress is installed and `ingress-nginx-controller` Service has an external hostname
 - 404 on `/api/hello`: ensure backend service is reachable; dev proxy is configured
