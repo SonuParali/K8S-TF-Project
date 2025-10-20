@@ -42,9 +42,10 @@ infra/terraform/.generated/
 *.keystore
 *.ppk
 
-# TLS directories
-infra/tls/dev/
-infra/tls/prod/
+# Terraform TLS directories (ensure certs/keys not tracked)
+infra/terraform/tls/
+infra/terraform/tls/dev/
+infra/terraform/tls/prod/
 
 # Env files
 .env.*
