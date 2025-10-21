@@ -2,11 +2,7 @@ name: CI-CD
 
 on:
   push:
-    branches:
-      - '**'
-  pull_request:
-    branches:
-      - '**'
+    branches: ["main"]
   workflow_dispatch:
     inputs:
       environment:
@@ -99,19 +95,19 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
 
-       - name: Debug AWS identity and EKS cluster
-         run: |
-           aws sts get-caller-identity
-           aws eks describe-cluster --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+      - name: Debug AWS identity and EKS cluster
+        run: |
+          aws sts get-caller-identity
+          aws eks describe-cluster --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
 
-       - name: Update kubeconfig
-         run: |
-           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }} --role-arn ${{ env.ROLE_TO_ASSUME }}
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }} --role-arn ${{ env.ROLE_TO_ASSUME }}
 
-       - name: Verify cluster access
-         run: |
-           kubectl cluster-info || { echo "kubectl cannot access cluster"; exit 1; }
-           kubectl get nodes || { echo "kubectl cannot access cluster"; exit 1; }
+      - name: Verify cluster access
+        run: |
+          kubectl cluster-info || { echo "kubectl cannot access cluster"; exit 1; }
+          kubectl get nodes || { echo "kubectl cannot access cluster"; exit 1; }
 
       - name: Install kubectl, kustomize, and helm
         run: |
