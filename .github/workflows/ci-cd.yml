@@ -113,6 +113,11 @@ jobs:
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
 
+      - name: Diagnose aws-auth mapping
+        run: |
+          echo "Attempting to read aws-auth ConfigMap (requires role mapping)"
+          kubectl -n kube-system get configmap aws-auth -o yaml || echo "Cannot read aws-auth; likely IAM role not mapped in aws-auth ConfigMap"
+
       - name: Verify cluster access
         run: |
           kubectl cluster-info || { echo "kubectl cannot access cluster"; exit 1; }
