@@ -23,7 +23,7 @@ resource "aws_iam_role" "gha_deploy" {
         Condition = {
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
-              "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/main",
+              "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/*",
               "repo:${var.github_org}/${var.github_repo}:pull_request"
             ]
           },

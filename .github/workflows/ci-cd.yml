@@ -15,6 +15,10 @@ on:
         default: "dev"
         required: true
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
