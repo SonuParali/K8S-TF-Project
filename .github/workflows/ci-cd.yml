@@ -25,6 +25,8 @@ env:
   EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
   ROLE_TO_ASSUME: ${{ secrets.ROLE_TO_ASSUME }}
   S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+  ECR_BACKEND_REPO: ${{ secrets.ECR_BACKEND_REPO }}
+  ECR_FRONTEND_REPO: ${{ secrets.ECR_FRONTEND_REPO }}
 
 jobs:
   test-and-build:
@@ -58,17 +60,17 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and Push Backend Image
         run: |
-          BACKEND_IMAGE=${{ env.ECR_REGISTRY }}/backend:${{ github.sha }}
+          BACKEND_IMAGE=${{ env.ECR_REGISTRY }}/${{ env.ECR_BACKEND_REPO }}:${{ github.sha }}
           docker build -t $BACKEND_IMAGE ./backend
           docker push $BACKEND_IMAGE
 
       - name: Build and Push Frontend Image
         run: |
-          FRONTEND_IMAGE=${{ env.ECR_REGISTRY }}/frontend:${{ github.sha }}
+          FRONTEND_IMAGE=${{ env.ECR_REGISTRY }}/${{ env.ECR_FRONTEND_REPO }}:${{ github.sha }}
           docker build -t $FRONTEND_IMAGE ./frontend
           docker push $FRONTEND_IMAGE
 
@@ -115,8 +117,8 @@ jobs:
       - name: Set images for overlay
         working-directory: k8s/overlays/${{ env.ENVIRONMENT }}
         run: |
-          kustomize edit set image REPLACE_BACKEND_IMAGE=${{ env.ECR_REGISTRY }}/backend:${{ github.sha }}
-          kustomize edit set image REPLACE_FRONTEND_IMAGE=${{ env.ECR_REGISTRY }}/frontend:${{ github.sha }}
+          kustomize edit set image REPLACE_BACKEND_IMAGE=${{ env.ECR_REGISTRY }}/${{ env.ECR_BACKEND_REPO }}:${{ github.sha }}
+          kustomize edit set image REPLACE_FRONTEND_IMAGE=${{ env.ECR_REGISTRY }}/${{ env.ECR_FRONTEND_REPO }}:${{ github.sha }}
 
       - name: Create TLS secret for environment
         run: |
