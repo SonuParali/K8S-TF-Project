@@ -125,10 +125,31 @@ jobs:
 
       - name: Install/Upgrade Nginx Ingress Controller
         run: |
+          set -e
+          # Ensure namespace exists
+          kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
+
+          # Add and update chart repo
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
-          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --set controller.service.type=LoadBalancer
-          kubectl wait --namespace ingress-nginx --for=condition=ready pod -l app.kubernetes.io/name=ingress-nginx --timeout=180s
+
+          # Attempt install/upgrade with robust flags
+          if ! helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+            --namespace ingress-nginx \
+            --create-namespace \
+            --set controller.service.type=LoadBalancer \
+            --wait \
+            --timeout 10m \
+            --atomic; then
+            echo "Helm upgrade/install failed; collecting diagnostics..."
+            kubectl -n ingress-nginx get all --show-kind
+            kubectl -n ingress-nginx get events --sort-by=.metadata.creationTimestamp | tail -n 200 || true
+            kubectl -n ingress-nginx describe deploy/ingress-nginx-controller || true
+            exit 1
+          fi
+
+          # Wait for controller pods to be ready
+          kubectl wait --namespace ingress-nginx --for=condition=ready pod -l app.kubernetes.io/name=ingress-nginx --timeout=600s
 
       - name: Set images for overlay
         working-directory: k8s/overlays/${{ env.ENVIRONMENT }}
