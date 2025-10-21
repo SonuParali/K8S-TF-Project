@@ -95,20 +95,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           role-to-assume: ${{ env.ROLE_TO_ASSUME }}
 
-      - name: Debug AWS identity and EKS cluster
-        run: |
-          aws sts get-caller-identity
-          aws eks describe-cluster --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
-
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }} --role-arn ${{ env.ROLE_TO_ASSUME }}
-
-      - name: Verify cluster access
-        run: |
-          kubectl cluster-info || { echo "kubectl cannot access cluster"; exit 1; }
-          kubectl get nodes || { echo "kubectl cannot access cluster"; exit 1; }
-
       - name: Install kubectl, kustomize, and helm
         run: |
           curl -L -o kubectl https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
@@ -118,9 +104,19 @@ jobs:
           sudo mv kustomize /usr/local/bin/
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
+      - name: Debug AWS identity and EKS cluster
+        run: |
+          aws sts get-caller-identity
+          aws eks describe-cluster --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Verify cluster access
+        run: |
+          kubectl cluster-info || { echo "kubectl cannot access cluster"; exit 1; }
+          kubectl get nodes || { echo "kubectl cannot access cluster"; exit 1; }
 
       - name: Install/Upgrade Nginx Ingress Controller
         run: |
