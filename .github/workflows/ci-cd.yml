@@ -75,8 +75,9 @@ jobs:
           docker push $FRONTEND_IMAGE
 
       - name: Upload frontend assets to S3 (optional)
+        if: env.S3_BUCKET_NAME != ''
         run: |
-          aws s3 sync frontend/dist s3://${{ env.S3_BUCKET_NAME }}/ --delete
+          aws s3 sync frontend/dist s3://${{ env.S3_BUCKET_NAME }}
 
   deploy:
     needs: test-and-build

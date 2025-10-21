@@ -89,6 +89,36 @@ resource "aws_iam_role_policy_attachment" "attach_eks" {
   policy_arn = aws_iam_policy.eks_admin.arn
 }
 
+resource "aws_iam_policy" "s3_uploader" {
+  name        = "${var.project_name}-s3-uploader"
+  description = "Allow syncing frontend assets to S3"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "s3:ListBucket"
+        ],
+        Resource = "arn:aws:s3:::${aws_s3_bucket.static.id}"
+      },
+      {
+        Effect   = "Allow",
+        Action   = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        Resource = "arn:aws:s3:::${aws_s3_bucket.static.id}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_s3" {
+  role       = aws_iam_role.gha_deploy.name
+  policy_arn = aws_iam_policy.s3_uploader.arn
+}
 output "gha_role_arn" {
   value = aws_iam_role.gha_deploy.arn
 }
