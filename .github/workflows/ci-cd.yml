@@ -83,10 +83,8 @@ jobs:
     needs: test-and-build
     runs-on: ubuntu-latest
     env:
-      ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-      NAMESPACE: ${{ github.event.inputs.environment || 'dev' }}
-+      ENVIRONMENT: ${{ github.event.inputs.environment || 'prod' }}
-+      NAMESPACE: ${{ github.event.inputs.environment || 'prod' }}
+      ENVIRONMENT: ${{ github.event.inputs.environment || 'prod' }}
+      NAMESPACE: ${{ github.event.inputs.environment || 'prod' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -124,10 +122,10 @@ jobs:
         run: |
           kubectl cluster-info || { echo "kubectl cannot access cluster"; exit 1; }
           kubectl get nodes || { echo "kubectl cannot access cluster"; exit 1; }
-+
-+      - name: Disable ingress-nginx admission webhook (cleanup)
-+        run: |
-+          kubectl delete validatingwebhookconfiguration ingress-nginx-admission --ignore-not-found=true
+
+      - name: Disable ingress-nginx admission webhook (cleanup)
+        run: |
+          kubectl delete validatingwebhookconfiguration ingress-nginx-admission --ignore-not-found=true
 
       - name: Create ingress-nginx values file
         if: env.ENVIRONMENT != 'dev'
