@@ -126,16 +126,16 @@ jobs:
       - name: Create ingress-nginx values file
         if: env.ENVIRONMENT != 'dev'
         run: |
-          Set-Content -Path C:\temp\ingress-values.yaml -Value @"
-controller:
-  admissionWebhooks:
-    enabled: false
-    patch:
-      enabled: false
-  deployment:
-    strategy:
-      type: Recreate
-"@
+          cat > /tmp/ingress-values.yaml <<'YAML'
+          controller:
+            admissionWebhooks:
+              enabled: false
+              patch:
+                enabled: false
+            deployment:
+              strategy:
+                type: Recreate
+          YAML
 
       - name: Clean stuck ingress-nginx admission jobs
         if: env.ENVIRONMENT != 'dev'
@@ -151,7 +151,7 @@ controller:
           helm repo update
           helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx \
-            --values C:\temp\ingress-values.yaml \
+            --values /tmp/ingress-values.yaml \
             --wait --timeout 10m --atomic
 
       - name: Set images for overlay
@@ -189,21 +189,21 @@ controller:
           rm -rf /tmp/tls
 
       - name: Apply manifests
+        working-directory: k8s/overlays/${{ env.ENVIRONMENT }}
         run: |
-          kubectl apply -k x:\DevOps\Documents\DevOps-task\k8s\overlays\${{ env.ENVIRONMENT }}
+          kubectl apply -k .
 
       - name: Print frontend ELB URL (dev only)
         if: env.ENVIRONMENT == 'dev'
         run: |
-          $hostname = kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          hostname=$(kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           echo "Frontend ELB: http://$hostname"
-          if (-not $hostname) { echo "Waiting for ELB hostname..." }
-          $retries = 30
-          while (-not $hostname -and $retries -gt 0) {
-            Start-Sleep -Seconds 10
-            $hostname = kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-            $retries -= 1
-          }
+          if [ -z "$hostname" ]; then echo "Waiting for ELB hostname..."; fi
+          for i in {1..30}; do
+            if [ -n "$hostname" ]; then break; fi
+            sleep 10
+            hostname=$(kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          done
           echo "Frontend ELB: http://$hostname"
 
       - name: Wait for rollout
