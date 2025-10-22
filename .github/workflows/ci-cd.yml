@@ -139,6 +139,8 @@ jobs:
             --create-namespace \
             --set controller.service.type=LoadBalancer \
             --set controller.admissionWebhooks.enabled=false \
+            --set controller.admissionWebhooks.patch.enabled=false \
+            --set controller.updateStrategy.type=Recreate \
             --wait \
             --timeout 10m \
             --atomic; then
@@ -146,6 +148,7 @@ jobs:
             kubectl -n ingress-nginx get all --show-kind
             kubectl -n ingress-nginx get events --sort-by=.metadata.creationTimestamp | tail -n 200 || true
             kubectl -n ingress-nginx describe deploy/ingress-nginx-controller || true
+            kubectl -n ingress-nginx get job/ingress-nginx-admission-create -o yaml || true
             exit 1
           fi
 
