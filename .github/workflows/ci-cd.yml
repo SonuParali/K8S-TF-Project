@@ -133,14 +133,28 @@ jobs:
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
 
+          # Prepare explicit values file to ensure booleans and strategy are applied
+          cat > /tmp/ingress-values.yaml <<'YAML'
+          controller:
+            service:
+              type: LoadBalancer
+            admissionWebhooks:
+              enabled: false
+              patch:
+                enabled: false
+            updateStrategy:
+              type: Recreate
+          YAML
+
+          # Clean up any stuck admission resources from previous releases
+          kubectl -n ingress-nginx delete job/ingress-nginx-admission-create --ignore-not-found
+          kubectl -n ingress-nginx delete job/ingress-nginx-admission-patch --ignore-not-found || true
+
           # Attempt install/upgrade with robust flags
           if ! helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx \
             --create-namespace \
-            --set controller.service.type=LoadBalancer \
-            --set controller.admissionWebhooks.enabled=false \
-            --set controller.admissionWebhooks.patch.enabled=false \
-            --set controller.updateStrategy.type=Recreate \
+            -f /tmp/ingress-values.yaml \
             --wait \
             --timeout 10m \
             --atomic; then
