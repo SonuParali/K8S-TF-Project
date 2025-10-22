@@ -123,51 +123,36 @@ jobs:
           kubectl cluster-info || { echo "kubectl cannot access cluster"; exit 1; }
           kubectl get nodes || { echo "kubectl cannot access cluster"; exit 1; }
 
-      - name: Install/Upgrade Nginx Ingress Controller
+      - name: Create ingress-nginx values file
+        if: env.ENVIRONMENT != 'dev'
         run: |
-          set -e
-          # Ensure namespace exists
-          kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
+          Set-Content -Path C:\temp\ingress-values.yaml -Value @"
+controller:
+  admissionWebhooks:
+    enabled: false
+    patch:
+      enabled: false
+  deployment:
+    strategy:
+      type: Recreate
+"@
 
-          # Add and update chart repo
+      - name: Clean stuck ingress-nginx admission jobs
+        if: env.ENVIRONMENT != 'dev'
+        run: |
+          kubectl -n ingress-nginx delete job ingress-nginx-admission-create --ignore-not-found=true
+          kubectl -n ingress-nginx delete job ingress-nginx-admission-patch --ignore-not-found=true
+
+      - name: Install/Upgrade ingress-nginx
+        if: env.ENVIRONMENT != 'dev'
+        run: |
+          kubectl create namespace ingress-nginx --dry-run=client -o yaml | kubectl apply -f -
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
           helm repo update
-
-          # Prepare explicit values file to ensure booleans and strategy are applied
-          cat > /tmp/ingress-values.yaml <<'YAML'
-          controller:
-            service:
-              type: LoadBalancer
-            admissionWebhooks:
-              enabled: false
-              patch:
-                enabled: false
-            updateStrategy:
-              type: Recreate
-          YAML
-
-          # Clean up any stuck admission resources from previous releases
-          kubectl -n ingress-nginx delete job/ingress-nginx-admission-create --ignore-not-found
-          kubectl -n ingress-nginx delete job/ingress-nginx-admission-patch --ignore-not-found || true
-
-          # Attempt install/upgrade with robust flags
-          if ! helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+          helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
             --namespace ingress-nginx \
-            --create-namespace \
-            -f /tmp/ingress-values.yaml \
-            --wait \
-            --timeout 10m \
-            --atomic; then
-            echo "Helm upgrade/install failed; collecting diagnostics..."
-            kubectl -n ingress-nginx get all --show-kind
-            kubectl -n ingress-nginx get events --sort-by=.metadata.creationTimestamp | tail -n 200 || true
-            kubectl -n ingress-nginx describe deploy/ingress-nginx-controller || true
-            kubectl -n ingress-nginx get job/ingress-nginx-admission-create -o yaml || true
-            exit 1
-          fi
-
-          # Wait for controller pods to be ready
-          kubectl wait --namespace ingress-nginx --for=condition=ready pod -l app.kubernetes.io/name=ingress-nginx --timeout=600s
+            --values C:\temp\ingress-values.yaml \
+            --wait --timeout 10m --atomic
 
       - name: Set images for overlay
         working-directory: k8s/overlays/${{ env.ENVIRONMENT }}
@@ -204,9 +189,22 @@ jobs:
           rm -rf /tmp/tls
 
       - name: Apply manifests
-        working-directory: k8s/overlays/${{ env.ENVIRONMENT }}
         run: |
-          kubectl apply -k .
+          kubectl apply -k x:\DevOps\Documents\DevOps-task\k8s\overlays\${{ env.ENVIRONMENT }}
+
+      - name: Print frontend ELB URL (dev only)
+        if: env.ENVIRONMENT == 'dev'
+        run: |
+          $hostname = kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          echo "Frontend ELB: http://$hostname"
+          if (-not $hostname) { echo "Waiting for ELB hostname..." }
+          $retries = 30
+          while (-not $hostname -and $retries -gt 0) {
+            Start-Sleep -Seconds 10
+            $hostname = kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+            $retries -= 1
+          }
+          echo "Frontend ELB: http://$hostname"
 
       - name: Wait for rollout
         run: |

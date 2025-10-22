@@ -9,6 +9,7 @@ patchesStrategicMerge:
   - patch-hpa.yaml
   - patch-ingress.yaml
   - patch-deployment-strategy.yaml
+  - patch-service-frontend.yaml
 images:
   - name: BACKEND_IMAGE
     newName: 390259467242.dkr.ecr.ap-south-1.amazonaws.com/k8s-tf-project-backend
