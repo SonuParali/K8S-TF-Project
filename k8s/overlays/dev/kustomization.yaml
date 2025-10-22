@@ -11,9 +11,9 @@ patchesStrategicMerge:
   - patch-deployment-strategy.yaml
   - patch-service-frontend.yaml
 images:
-  - name: BACKEND_IMAGE
+  - name: 390259467242.dkr.ecr.ap-south-1.amazonaws.com/k8s-tf-project-backend
     newName: 390259467242.dkr.ecr.ap-south-1.amazonaws.com/k8s-tf-project-backend
     newTag: dev
-  - name: FRONTEND_IMAGE
+  - name: 390259467242.dkr.ecr.ap-south-1.amazonaws.com/k8s-tf-project-frontend
     newName: 390259467242.dkr.ecr.ap-south-1.amazonaws.com/k8s-tf-project-frontend
     newTag: dev

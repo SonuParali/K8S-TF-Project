@@ -197,18 +197,52 @@ jobs:
         run: |
           kubectl apply -k .
 
-      - name: Print frontend ELB URL (dev only)
-        if: env.ENVIRONMENT == 'dev'
+      - name: Print public URL
         run: |
-          hostname=$(kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-          echo "Frontend ELB: http://$hostname"
-          if [ -z "$hostname" ]; then echo "Waiting for ELB hostname..."; fi
-          for i in {1..30}; do
-            if [ -n "$hostname" ]; then break; fi
+          set -e
+          NAMESPACE=${{ env.NAMESPACE }}
+          echo "Discovering public endpoint in namespace: $NAMESPACE"
+
+          # Try frontend Service LoadBalancer first (dev)
+          frontend_host=$(kubectl -n "$NAMESPACE" get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+          if [ -z "$frontend_host" ]; then
+            echo "frontend-svc has no LoadBalancer yet; checking Ingress hostname..."
+          fi
+
+          # Try Ingress hostname (staging/prod)
+          ingress_host=$(kubectl -n "$NAMESPACE" get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+          if [ -z "$ingress_host" ]; then
+            echo "Ingress hostname not ready; checking ingress-nginx controller service..."
+          fi
+
+          # Fallback to ingress-nginx controller service ELB
+          nginx_host=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+
+          # Wait up to ~5 minutes for any host to appear
+          for i in $(seq 1 30); do
+            if [ -n "$frontend_host" ] || [ -n "$ingress_host" ] || [ -n "$nginx_host" ]; then
+              break
+            fi
             sleep 10
-            hostname=$(kubectl -n dev get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+            frontend_host=$(kubectl -n "$NAMESPACE" get svc frontend-svc -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+            ingress_host=$(kubectl -n "$NAMESPACE" get ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+            nginx_host=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
           done
-          echo "Frontend ELB: http://$hostname"
+
+          if [ -n "$frontend_host" ]; then
+            echo "Frontend Service ELB: http://$frontend_host"
+          fi
+          if [ -n "$ingress_host" ]; then
+            echo "Ingress Hostname: http://$ingress_host"
+          fi
+          if [ -n "$nginx_host" ]; then
+            echo "Ingress-NGINX Controller ELB: http://$nginx_host"
+            echo "Try: http://$nginx_host/ and http://$nginx_host/api/"
+          fi
+
+          if [ -z "$frontend_host$ingress_host$nginx_host" ]; then
+            echo "No public hostname discovered yet. Check cluster capacity and events."
+          fi
 
       - name: Wait for rollout
         run: |
