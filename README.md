@@ -9,7 +9,6 @@ This repo demonstrates a full-stack microservices application deployed to AWS us
 - Orchestration: Kubernetes manifests managed via Kustomize with dev/staging/prod overlays
 - AWS: EKS for Kubernetes, ECR for container registry, S3 for static asset hosting, NGINX Ingress exposed via AWS LoadBalancer (ELB), CloudWatch for logs
 - CI/CD: GitHub Actions builds, tests, pushes images to ECR, and deploys to EKS
-- Domain & SSL: Route 53 + ACM certificate for HTTPS
 
 ## Repo Layout
 ```
